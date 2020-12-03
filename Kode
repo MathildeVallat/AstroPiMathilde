@@ -69,7 +69,6 @@ for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=
     b = pixAverage
     iss.compute()
     sun.compute()
-    moon.compute()
     vinkel = abs(float(repr(iss.ra))-float(repr(sun.ra)))
     print('vinkel mellem Solen og ISS er {:1.6f} radian.'.format(vinkel))
     if (pi1 > vinkel > pi2):
