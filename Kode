@@ -42,8 +42,6 @@ iss = ephem.readtle(name, line1, line2)
 
 sun = ephem.Sun()
 
-moon = ephem.Moon()
-
 with open ("Data.csv", "w") as file:
     file.write("Time, Duration , Temperature , Pressure , Humidity, Brightness, Dag eller nat \n")
 
