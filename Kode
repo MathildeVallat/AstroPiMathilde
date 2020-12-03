@@ -1,0 +1,100 @@
+# import the necessary packages
+import ephem
+from picamera.array import PiRGBArray
+from picamera import PiCamera
+import time
+import cv2
+import numpy as np
+import datetime
+from time import sleep
+from sense_hat import SenseHat
+sense = SenseHat()
+# initialize the camera and grab a reference to the raw camera capture
+camera = PiCamera()
+camera.resolution = (640, 480)
+camera.framerate = 32
+camera.iso = 200
+time.sleep(2)
+camera.shutter_speed = camera.exposure_speed
+camera.shutter_speed = 20000
+camera.exposure_compensation = 1
+camera.awb_gains = (1,1)
+camera.exposure_mode = 'off'
+camera.awb_mode = 'off'
+
+rawCapture = PiRGBArray(camera, size=(640, 480))
+# allow the camera to warmup
+time.sleep(0.1)
+
+start_time = datetime.datetime.now()
+duration = 20
+seconds = 0
+white = (255,255,255)
+red = (255,0,0)
+
+name = "ISS (ZARYA)"
+line1 = "1 25544U 98067A   20309.20855620  .00002422  00000-0  51431-4 0  9990"
+line2 = "2 25544  51.6472  15.6247 0001884  85.9288  10.5094 15.49382450253722"
+pi1 = (3/2)*3.1415
+pi2 = (3.1415/2)
+
+iss = ephem.readtle(name, line1, line2)
+
+sun = ephem.Sun()
+
+moon = ephem.Moon()
+
+with open ("Data.csv", "w") as file:
+    file.write("Time, Duration , Temperature , Pressure , Humidity, Brightness, Dag eller nat \n")
+
+# capture frames from the camera
+for frame in camera.capture_continuous(rawCapture, format="bgr", use_video_port=True):
+    # grab the raw NumPy array representing the image, then initialize the timestamp
+    image = frame.array
+    # laver det om til grayscale
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    # beregner gennemsnit
+    pixAverage = np.average(gray)
+    print(pixAverage)
+    time.sleep(0.2)
+    # show the frame
+    cv2.imshow("Frame", gray)
+    key = cv2.waitKey(1) & 0xFF
+    # clear the stream in preparation for the next frame
+    rawCapture.truncate(0)
+    sense.show_letter("+", text_colour=white, back_colour=red)
+    t = sense.get_temperature()
+    p = sense.get_pressure()
+    h = sense.get_humidity()
+    b = pixAverage
+    iss.compute()
+    sun.compute()
+    moon.compute()
+    vinkel = abs(float(repr(iss.ra))-float(repr(sun.ra)))
+    print('vinkel mellem Solen og ISS er {:1.6f} radian.'.format(vinkel))
+    if (pi1 > vinkel > pi2):
+        dn ='Det er nat.'
+        print('Det er nat.')
+    else:
+        dn = 'Det er dag.'
+        print('Det er dag')
+    now_time= datetime.datetime.now()
+    seconds = (now_time-start_time).total_seconds()
+    print(seconds)
+    se = seconds
+    with open ("Data.csv", "a") as file:
+        file.write("%s, %s, %s, %s, %s, %s, %s  \n" % (now_time,se,t,p,h,b,dn))
+    sleep(0.5)
+    sense.show_letter("-", text_colour=white, back_colour=red)
+    sleep(0.5)
+
+    print('ISS')
+    print(iss.ra, iss.dec)
+    print('moon')
+    print(moon.ra, moon.dec)
+    print('sun')
+    print(sun.ra, sun.dec)
+
+    if se > 10800:
+        sense.clear()
+        break
